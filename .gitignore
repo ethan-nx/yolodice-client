@@ -1,0 +1,8 @@
+.DS_Store
+*~
+.*.sw?
+.*.un?
+.viminfo 
+.lvimrc
+*.gem
+/doc
