@@ -1,6 +1,7 @@
 require 'socket'
 require 'openssl'
 require 'thread'
+require 'logger'
 require 'json'
 require 'bitcoin'
 
@@ -94,6 +95,7 @@ class YolodiceClient
         call :ping
       end
     end
+    true
   end
 
 
@@ -106,6 +108,7 @@ class YolodiceClient
     @connection.close
     @listening_thread.exit
     @pinging_thread.exit
+    true
   end
 
 
@@ -122,10 +125,10 @@ class YolodiceClient
   def authenticate auth_key
     auth_key = Bitcoin::Key.from_base58(auth_key) unless auth_key.is_a?(Bitcoin::Key)
     challenge = generate_auth_challenge
-    @user = auth_by_address address: auth_key.addr, signature: auth_key.sign_message(challenge)
-    raise Error, "Authentication failed" unless @user
-    log.debug "Authenticated as user #{@user['name']}(#{@user['id']})"
-    @user
+    user = auth_by_address address: auth_key.addr, signature: auth_key.sign_message(challenge)
+    raise Error, "Authentication failed" unless user
+    log.debug "Authenticated as user #{user['name']}(#{user['id']})"
+    user
   end
 
 
@@ -157,6 +160,7 @@ class YolodiceClient
       log.debug{ "Calling remote method #{method}(#{params.inspect if params != nil}) with an async callback" }
       log.debug{ ">>> #{request.to_json}" }
       @connection.puts request.to_json
+      nil
     else
       # a regular blocking request
       @thread_semaphore.synchronize{ @current_requests[id] = Thread.current.object_id }
@@ -181,16 +185,12 @@ class YolodiceClient
     call method, *args, &blk
   end
 
-  # def hashiefy o
-  #   o.is_a?(Hash) ? Hashie::Mash.new(o) : o
-  # end
-
   def log
     # no logging by default
     @log ||= Logger.new '/dev/null'
   end
 
-  private :hashiefy, :log
+  private :log
 
 
   ##
@@ -212,7 +212,7 @@ class YolodiceClient
     
     def initialize(error_obj = {'code' => -1, 'message' => "RPC Error"})
       @code = error_obj['code'] || -1
-      @data = error_obj['data'].to_hash if error_obj['data']
+      @data = error_obj['data'] if error_obj['data']
       super "#{@code}: #{error_obj['message']}"
     end
   end
