@@ -32,13 +32,16 @@ YOLOdice API requires authentication for most of it's methods. A Bitcoin key/add
 
 1. Generate an Bitcoin public and private key:
 
+
     require 'bitcoin'
 
     btc_key = Bitcoin::Key.generate
     auth_key = btc_key.to_base58  # this is your secret code, store it in a secure place
     auth_addr = btc_key.addr      # paste this in your YD settings as a new key
 
+
 2. Go to [YOLOdice account Settings](https://yolodice.com/#settings), create a new key and paste the `auth_addr` generated above. Set permissions as you wish.
+
 3. Use `auth_key` in your code to authenticate.
 
 Just a quick note &mdash; this address is used ONLY to authenticate. No coins will be ever sent to it.
@@ -95,7 +98,7 @@ There are two error classes:
 
 `RemoteError` has two extra attributes: `code` and `data` that are mapped to values in the error object returned from the server.
 
-## Another example
+## An example
 
 Here is a script that connects to the server, authenticates, fetches user data, rolls a few 50% chance bets and reads user data again (make sure to use your own credential):
 
