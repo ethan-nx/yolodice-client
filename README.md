@@ -32,16 +32,15 @@ YOLOdice API requires authentication for most of it's methods. A Bitcoin key/add
 
 1. Generate an Bitcoin public and private key:
 
-
+    ```ruby
     require 'bitcoin'
 
     btc_key = Bitcoin::Key.generate
     auth_key = btc_key.to_base58  # this is your secret code, store it in a secure place
     auth_addr = btc_key.addr      # paste this in your YD settings as a new key
-
+    ```
 
 2. Go to [YOLOdice account Settings](https://yolodice.com/#settings), create a new key and paste the `auth_addr` generated above. Set permissions as you wish.
-
 3. Use `auth_key` in your code to authenticate.
 
 Just a quick note &mdash; this address is used ONLY to authenticate. No coins will be ever sent to it.
@@ -49,9 +48,11 @@ Just a quick note &mdash; this address is used ONLY to authenticate. No coins wi
 
 ## Connecting
 
-    yd = YolodiceClient.new
-    yd.connect
-    yd.authenticate auth_key
+```ruby
+yd = YolodiceClient.new
+yd.connect
+yd.authenticate auth_key
+```
 
 It's important to authenticate immediately after connecting. Otherwise the connection will be closed by the server.
 
@@ -62,13 +63,15 @@ The client automatically sends a `ping` requests to the server every 30 seconds 
 
 To preview the actuall messages sent back and forth you could provide your own logger object and set log level to `DEBUG` like this:
 
-    yd = YolodiceClient.new
-    logger = Logger.new STDERR
-    logger.level = Logger::DEBUG
-    yd.logger = logger
+```ruby
+yd = YolodiceClient.new
+logger = Logger.new STDERR
+logger.level = Logger::DEBUG
+yd.logger = logger
 
-    yd.connect
-    yd.authenticate auth_key
+yd.connect
+yd.authenticate auth_key
+```
 
 This would result in the output similar to this:
 
@@ -102,18 +105,20 @@ There are two error classes:
 
 Here is a script that connects to the server, authenticates, fetches user data, rolls a few 50% chance bets and reads user data again (make sure to use your own credential):
 
-    require 'yolodice_client'
-    require 'pp'
+```ruby
+require 'yolodice_client'
+require 'pp'
 
-    auth_key = 'cPFVHENWNjs5UKNXXynDSWiRkBEph8hcrjHKkXK5SW9QHxx7i4jC'
-    yd = YolodiceClient.new
-    yd.connect
-    user = yd.authenticate auth_key
-    user_data = yd.read_user_data selector: {id: user['id']}
-    puts "Your account balance is: #{user_data['balance']} satoshis."
-    10.times do
-      b = yd.create_bet attrs: {amount: 100, range: 'lo', target: 500000}
-      puts "Bet profit: #{b['profit']}"
-    end
-    user_data = yd.read_user_data selector: {id: user['id']}
-    puts "Your account balance is: #{user_data['balance']} satoshis."
+auth_key = 'cPFVHENWNjs5UKNXXynDSWiRkBEph8hcrjHKkXK5SW9QHxx7i4jC'
+yd = YolodiceClient.new
+yd.connect
+user = yd.authenticate auth_key
+user_data = yd.read_user_data selector: {id: user['id']}
+puts "Your account balance is: #{user_data['balance']} satoshis."
+10.times do
+  b = yd.create_bet attrs: {amount: 100, range: 'lo', target: 500000}
+  puts "Bet profit: #{b['profit']}"
+end
+user_data = yd.read_user_data selector: {id: user['id']}
+puts "Your account balance is: #{user_data['balance']} satoshis."
+```
