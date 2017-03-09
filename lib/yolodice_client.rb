@@ -62,28 +62,33 @@ class YolodiceClient
     @listening_thread = Thread.new do
       log.debug 'Listening thread started'
       loop do
-        msg = @connection.gets
-        log.debug{ "<<< #{msg}" }
-        message = JSON.parse msg
-        if message['id'] && (message.has_key?('result') || message.has_key?('error'))
-          # definitealy a response
-          callback = @thread_semaphore.synchronize{ @current_requests.delete message['id'] }
-          raise Error, "Unknown id in response" unless callback
-          if callback.is_a? Integer
-            # it's a thread
-            @receive_queues[callback] << message
-          elsif callback.is_a? Proc
-            # A thread pool would be better.
-            Thread.new do
-              callback.call message
+        begin
+          msg = @connection.gets
+          next if msg == nil
+          log.debug{ "<<< #{msg}" }
+          message = JSON.parse msg
+          if message['id'] && (message.has_key?('result') || message.has_key?('error'))
+            # definitealy a response
+            callback = @thread_semaphore.synchronize{ @current_requests.delete message['id'] }
+            raise Error, "Unknown id in response" unless callback
+            if callback.is_a? Integer
+              # it's a thread
+              @receive_queues[callback] << message
+            elsif callback.is_a? Proc
+              # A thread pool would be better.
+              Thread.new do
+                callback.call message
+              end
+            end
+          else
+            if message['id']
+              # It must be a request from the server. We do not support it yet.
+            else
+              # No id, it must be a notification then. This can be implemented later.
             end
           end
-        else
-          if message['id']
-            # It must be a request from the server. We do not support it yet.
-          else
-            # No id, it must be a notification then. This can be implemented later.
-          end
+        rescue StandardError => e
+          log.error e
         end
       end
     end
@@ -91,8 +96,12 @@ class YolodiceClient
     @pinging_thread = Thread.new do
       log.debug 'Pinging thread started'
       loop do
-        sleep 30
-        call :ping
+        begin
+          sleep 30
+          call :ping
+        rescue StandardError => e
+          log.error e
+        end
       end
     end
     true
@@ -165,6 +174,7 @@ class YolodiceClient
       # a regular blocking request
       @thread_semaphore.synchronize{ @current_requests[id] = Thread.current.object_id }
       queue = (@receive_queues[Thread.current.object_id] ||= Queue.new)
+      queue.clear
       log.debug{ "Calling remote method #{method}(#{params.inspect if params != nil})" }
       log.debug{ ">>> #{request.to_json}" }
       @connection.puts request.to_json
@@ -213,7 +223,11 @@ class YolodiceClient
     def initialize(error_obj = {'code' => -1, 'message' => "RPC Error"})
       @code = error_obj['code'] || -1
       @data = error_obj['data'] if error_obj['data']
-      super "#{@code}: #{error_obj['message']}"
+      msg = "#{@code}: #{error_obj['message']}"
+      if @code == 422 && @data && @data.has_key?('errors')
+        msg += ': ' + @data['errors'].to_json
+      end
+      super msg
     end
   end
 
