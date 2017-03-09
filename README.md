@@ -101,6 +101,47 @@ There are two error classes:
 
 `RemoteError` has two extra attributes: `code` and `data` that are mapped to values in the error object returned from the server.
 
+## Helper methods
+
+#### .satoshi_to_btc(v)
+
+Converts an amount value from satoshis (integer) to bitcoin (float).
+
+```ruby
+YolodiceClient.satoshi_to_btc(10_000)
+# => 0.0001
+```
+
+#### .btc_to_satoshi(v)
+
+Converts an amount value from bitcoin (float) to satoshi (integer).
+
+```ruby
+YolodiceClient.btc_to_satoshi(0.12312312)
+# => 12312312
+```
+
+#### .target_from_multiplier(m)
+
+It calculates target value given the multiplier for the bet. If you want to find our the target that corresponds e.g. to multiplier `4`, try this:
+
+```ruby
+target = YolodiceClient.target_from_multiplier(4)
+# => 247500
+```
+
+You can then use the target as an attribute to API method `create_bet`.
+
+#### .target_from_probability(p)
+
+It calculates target value given the win probability. Note: probability is a value ranged from 0 (0%) to 1 (100%). To find target that corresponds to win probability of 50% do this:
+
+```ruby
+target = YolodiceClient.target_from_probability(0.5)
+# => 500000
+```
+
+
 ## An example
 
 Here is a script that connects to the server, authenticates, fetches user data, rolls a few 50% chance bets and reads user data again (make sure to use your own credential):
@@ -122,3 +163,7 @@ end
 user_data = yd.read_user_data selector: {id: user['id']}
 puts "Your account balance is: #{user_data['balance']} satoshis."
 ```
+
+# Even more examples
+
+We have created a new Github repository with Ruby script examples to get you started. If you are looking for inspiration, check this out: https://github.com/ethan-nx/yolodice-examples.

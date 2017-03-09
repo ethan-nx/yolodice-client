@@ -231,4 +231,34 @@ class YolodiceClient
     end
   end
 
+  class << self
+
+    ##
+    # Returns bet terget given the required multiplier.
+
+    def target_from_multiplier m
+      edge = 0.01
+      (1_000_000.0 * (1.0 - edge) / m).round
+    end
+
+    ##
+    # Returns bet target given the required win probability.
+
+    def target_from_probability p
+      (p * 1_000_000.0).round
+    end
+
+    ##
+    # Converts amount from satoshi (integer) to amount in bitcoins (float).
+
+    def satoshi_to_btc v
+      (v.to_f / 100_000_000).round(8)
+    end
+
+    ## Converts amount from bitcoins (float) to satoshi (integer).
+    def btc_to_satoshi v
+      (v * 100_000_000).round
+    end
+
+  end
 end
