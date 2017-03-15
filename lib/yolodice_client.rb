@@ -13,6 +13,13 @@ class YolodiceClient
   # <tt>OpenSSL::SSL::SSLSocket</tt> object created by the <tt>connect</tt> method.
   attr_reader :connection
 
+  # Proc for handling notifications from the server. This proc (if set) will be
+  # called each time the server sends a notification, i.e. a message that is not a
+  # response to any client call.
+  # The proc is given a single argument: the message hash.
+  # The proc is called in a separate thread.
+  attr_accessor :notification_proc
+
   ##
   # Initializes the client object. The method accepts an option hash with the following keys:
   # * <tt>:host</tt> -- defaults to <tt>api.yolodice.com</tt>
@@ -84,7 +91,12 @@ class YolodiceClient
             if message['id']
               # It must be a request from the server. We do not support it yet.
             else
-              # No id, it must be a notification then. This can be implemented later.
+              # No id, it must be a notification then.
+              if notification_proc
+                Thread.new do
+                  notification_proc.call message
+                end
+              end
             end
           end
         rescue StandardError => e
