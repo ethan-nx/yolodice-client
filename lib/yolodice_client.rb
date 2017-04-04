@@ -209,7 +209,7 @@ class YolodiceClient
 
   def log
     # no logging by default
-    @log ||= Logger.new '/dev/null'
+    @log ||= Logger.new File::NULL
   end
 
   private :log

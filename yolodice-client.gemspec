@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'yolodice-client'
-  s.version     = '0.1.4'
+  s.version     = '0.1.5'
   s.summary     = 'Ruby API client for YOLOdice.com'
   s.description = 'A simple JSON-RPC2 client dedicated for YOLOdice.com API.'
   s.authors     = ['ethan_nx']
