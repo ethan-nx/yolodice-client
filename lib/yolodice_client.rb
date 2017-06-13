@@ -52,6 +52,10 @@ class YolodiceClient
   # Connects to the host.
 
   def connect
+    if @connection && !@connection.closed?
+      raise Error, 'Connection already open'
+    end
+
     @connection = if @opts[:ssl]
                     log.debug "Connecting to #{@opts[:host]}:#{@opts[:port]} over SSL"
                     socket = TCPSocket.open @opts[:host], @opts[:port]
@@ -70,8 +74,16 @@ class YolodiceClient
       log.debug 'Listening thread started'
       loop do
         begin
+          if @connection.closed?
+            # keep the thread alive for a while
+            sleep 1
+          end
+
           msg = @connection.gets
-          next if msg == nil
+          if msg == nil
+            # Connection is closed upstream.
+            close
+          end
           log.debug{ "<<< #{msg}" }
           message = JSON.parse msg
           if message['id'] && (message.has_key?('result') || message.has_key?('error'))
@@ -110,7 +122,7 @@ class YolodiceClient
       loop do
         begin
           sleep 30
-          call :ping
+          call :ping unless @connection.closed?
         rescue StandardError => e
           log.error e
         end
@@ -127,8 +139,23 @@ class YolodiceClient
     log.debug "Closing connection"
     # Stop threads
     @connection.close
-    @listening_thread.exit
-    @pinging_thread.exit
+    # Send error to all pending requests
+    message = { 'client_error' => 'Connection closed' }
+    while(callback = @thread_semaphore.synchronize{ @current_requests.shift }) do
+      callback = callback[1]
+      if callback.is_a? Integer
+        # it's a thread
+        @receive_queues[callback] << message
+      elsif callback.is_a? Proc
+        # A thread pool would be better.
+        Thread.new do
+          callback.call message
+        end
+      end
+    end
+    # Thread.stop
+    @pinging_thread.kill
+    @listening_thread.kill
     true
   end
 
@@ -162,7 +189,7 @@ class YolodiceClient
   # * <tt>&blk</tt> -- a callback (optional) to be called upon receiving a response for async calls. The callback will receive the response object.
 
   def call method, *arguments, &blk
-    raise Error, "Not connected" unless @connection && !@connection.closed?
+    raise ConnectionClosedError, "Not connected" unless @connection && !@connection.closed?
     params = if arguments.count == 0
                nil
              elsif arguments.is_a?(Array) && arguments[0].is_a?(Hash)
@@ -195,8 +222,15 @@ class YolodiceClient
         response['result']
       elsif response['error']
         raise RemoteError.new response['error']
+      elsif response['client_error'] && response['client_error'] == 'Connection closed'
+        raise ConnectionClosedError
       end
     end
+  end
+
+
+  def check_connection
+    raise ConnectionClosedError if @connection.closed?
   end
 
  
@@ -219,6 +253,11 @@ class YolodiceClient
   # Thrown whenever an error in the client occurs.
 
   class Error < StandardError; end
+
+  ##
+  # Thrown whenever the connection is closed while it is not supposed to be.
+
+  class ConnectionClosedError < StandardError; end
 
 
   ##

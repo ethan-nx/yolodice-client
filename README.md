@@ -97,9 +97,12 @@ There are two error classes:
 
 * `YolodiceClient::Error` that inherits from `StandardError` and is used for errors thrown by the client itself,
 * `YolodiceClient::RemoteError` that inherits from `StandardError` that is used to pass errors from the remote server,
+* `YolodiceClient::ConnectionCloserError` that inherits from `StandardError` that is thrown when connection is closed,
 * any errors from underlaying `TCPSocket` or `SSLSocket` are passed through.
 
 `RemoteError` has two extra attributes: `code` and `data` that are mapped to values in the error object returned from the server.
+
+If you want to handle connection issues within your app, you could rescue `YolodiceClient::ConnectionCloserError`, `TCPSocket` and `SSLSocket` errors and try `#connect` and `#authenticate` on error.
 
 ## Helper methods
 
